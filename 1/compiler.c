@@ -1,33 +1,26 @@
 #include <assert.h>
 #include "compiler.h"
-
 int E();
 void STMT();
 void IF();
 void BLOCK();
-
 int tempIdx = 0, labelIdx = 0;
-
 #define nextTemp() (tempIdx++)
 #define nextLabel() (labelIdx++)
 #define emit printf
-
 int isNext(char *set) {
   char eset[SMAX], etoken[SMAX];
   sprintf(eset, " %s ", set);
   sprintf(etoken, " %s ", tokens[tokenIdx]);
   return (tokenIdx < tokenTop && strstr(eset, etoken) != NULL);
 }
-
 int isEnd() {
   return tokenIdx >= tokenTop;
 }
-
 char *next() {
   // printf("token[%d]=%s\n", tokenIdx, tokens[tokenIdx]);
   return tokens[tokenIdx++];
 }
-
 char *skip(char *set) {
   if (isNext(set)) {
     return next();
@@ -60,7 +53,6 @@ int F() {
   return f;
 }
 
-// E = F (op E)*
 int E() {
   int i1 = F();
   while (isNext("+ - * / & | ! < > = <= >= == !=")) {
@@ -99,7 +91,6 @@ void WHILE() {
   emit("(L%d)\n", whileEnd);
 }
 
-// if (EXP) STMT (else STMT)?
 void IF() {
   skip("if");
   skip("(");
@@ -113,6 +104,28 @@ void IF() {
 }
 
 // DOWHILE = do STMT while (E);
+void DOWHILE() {
+  int doBegin = nextLabel();  
+  int doEnd = nextLabel();   
+
+  emit("(L%d)\n", doBegin);
+  
+  skip("do");  
+  STMT();  
+
+  skip("while");  
+  skip("(");  
+  int e = E(); 
+
+  emit("if not T%d goto L%d\n", e, doEnd);
+
+  skip(")");  
+  
+  emit("goto L%d\n", doBegin);
+  
+  emit("(L%d)\n", doEnd);
+}
+
 
 // STMT = WHILE | BLOCK | IF | DOWHILE | ASSIGN
 void STMT() {
@@ -127,26 +140,19 @@ void STMT() {
   else
     ASSIGN();
 }
-
-// STMTS = STMT*
 void STMTS() {
   while (!isEnd() && !isNext("}")) {
     STMT();
   }
 }
-
-// BLOCK = { STMTS }
 void BLOCK() {
   skip("{");
   STMTS();
   skip("}");
 }
-
-// PROG = STMTS
 void PROG() {
   STMTS();
 }
-
 void parse() {
   printf("============ parse =============\n");
   tokenIdx = 0;
